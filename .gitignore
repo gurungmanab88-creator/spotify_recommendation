@@ -1,0 +1,25 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VS Code settings
+.vscode/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data and Outputs (large datasets and model files)
+data/spotify_tracks.csv
+outputs/
+outputs.scaler.pkl
+*.pkl
+*.h5
+*.csv
+*.cs
