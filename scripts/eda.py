@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns 
 import os
 
-def run_eda(input_path = "outputs/cleaned_tracks.cs", output_dir = "outputs/figures/"):
+def run_eda(input_path = "outputs/cleaned_tracks.csv", output_dir = "outputs/figures/"):
 
     os.makedirs(output_dir, exist_ok =True)
 
@@ -33,8 +33,8 @@ def run_eda(input_path = "outputs/cleaned_tracks.cs", output_dir = "outputs/figu
     plt.figure(figsize = (10,8))
     corr = df[audio_features].corr()
     sns.heatmap(corr, annot = True, cmap = "coolwarm", fmt = ".2f")
-    plt.title("Corealtion heatmap of audio_features")
-    plt.savefig(f"{output_dir}/corelation_heatmap.png")
+    plt.title("Correaltion heatmap of audio_features")
+    plt.savefig(f"{output_dir}/correlation_heatmap.png")
     plt.close()
 
     #Popularity distibution

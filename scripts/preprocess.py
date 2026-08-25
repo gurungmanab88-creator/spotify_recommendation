@@ -7,7 +7,7 @@ def preprocess(
     input_path = "data/spotify_tracks.csv",
     cleaned_path = "outputs/cleaned_tracks.csv",
     scaled_path = "outputs/scaled_features.csv",
-    scaler_path = "outputs.scaler.pkl"
+    scaler_path = "outputs/scaler.pkl"
 ):
    os.makedirs("outputs", exist_ok = True)
 
