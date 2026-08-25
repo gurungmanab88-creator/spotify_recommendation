@@ -1,12 +1,8 @@
 import pandas as pd 
 from sklearn.neighbors import NearestNeighbors 
 import joblib
+from config import AUDIO_FEATURES
 
-AUDIO_FEATURES = [
-    "danceability", "energy", "valence", "tempo", 
-    "acousticness", "instrumentalness", "liveness", 
-    "speechiness", "loudness"
-]
 
 def build_baseline(
     scaled_path = "outputs/scaled_features.csv",
@@ -40,8 +36,5 @@ def recommend(track_name, df ,knn , n_neighbors = 10):
     print(recs[["track_name", "artists", "track_genre", "popularity"]])
 
 if __name__ == "__main__":
-    df , knn = build_baseline()
-    
-    track_name = input("Enter a trcak name : ")
-
-    recommend(track_name, df, knn)
+    df, knn = build_baseline()
+    print("Baseline KNN model trained and saved. No user input required.")

@@ -55,6 +55,22 @@ def recommend_track_autoencoder(track_name, df, encoder, knn, n_neighbors=10):
     print(recs[["track_name", "artists", "track_genre", "popularity"]])
     return recs
 
+def recommend_within_cluster(track_name, df, encoder, knn, cluster_model, n_neighbors=10):
+    track = df[df["track_name"].str.lower() == track_name.lower()]
+    if track.empty:
+        print("Track not found.")
+        return None
+    idx = track.index[0]
+    X = df[AUDIO_FEATURES].values
+    embedding = encoder.predict(X[idx].reshape(1, -1))
+    cluster = cluster_model.predict(embedding)[0]
+    cluster_indices = cluster_model.predict(encoder.predict(X))
+    same_cluster = df[cluster_indices == cluster]
+    print(f"\nRecommendations for '{track_name}' within cluster {cluster}:")
+    print(same_cluster[["track_name", "artists", "track_genre", "popularity"]].head(n_neighbors))
+    return same_cluster
+
+
 
 def recommend_track_baseline(track_name, df, knn, n_neighbors=10):
     track = df[df["track_name"].str.lower() == track_name.lower()]
