@@ -37,13 +37,19 @@ def train_autoencoder(
     autoencoder.compile(optimizer="adam", loss="mse")
 
     # Train autoencoder
-    autoencoder.fit(
+    history = autoencoder.fit(
         X, X,
         epochs=epochs,
         batch_size=batch_size,
         shuffle=True,
         validation_split=0.1
     )
+
+    # Save training history for Streamlit visualization
+    import pickle
+    with open("outputs/autoencoder_history.pkl", "wb") as f:
+        pickle.dump(history.history, f)
+    print("Training history saved to outputs/autoencoder_history.pkl")
 
     # Save encoder
     encoder.save(encoder_path)
@@ -58,7 +64,7 @@ def train_autoencoder(
     joblib.dump(knn, knn_path)
     print(f"KNN model saved to {knn_path}")
 
-          # Save embeddings array
+    # Save embeddings array
     np.save("outputs/embeddings.npy", embeddings)
     print("Embeddings saved to outputs/embeddings.npy")
 
@@ -67,7 +73,6 @@ def train_autoencoder(
     print("Cleaned dataframe saved to outputs/cleaned_data.csv")
 
     return df, encoder, knn
-
 
 
 def recommend(track_name, df, encoder, knn, n_neighbors=10):
