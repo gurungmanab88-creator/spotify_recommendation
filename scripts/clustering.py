@@ -34,7 +34,7 @@ def cluster_embeddings(
     if score_kmeans >= score_gmm:
         print("KMeans performed better — using kmeans.pkl")
         df["cluster"] = labels_kmeans
-        df.to_csv(df_path, index=False)  # save cluster labels into dataframe
+        df.to_csv(df_path, index=False) 
         return kmeans, labels_kmeans
     else:
         print("GMM performed better — using gmm.pkl")
