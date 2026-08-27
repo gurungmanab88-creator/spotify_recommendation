@@ -7,7 +7,17 @@ import joblib
 from tensorflow.keras.models import load_model
 import os
 import pickle
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 from scripts.config import AUDIO_FEATURES, OUTPUT_DIR
+
+from scripts.eda import (
+    plot_feature_distributions,
+    plot_genre_counts,
+    plot_correlation_heatmap,
+    plot_popularity_distribution
+)
+
 # Models and data are loaded below using caching functions
 encoder = load_model(os.path.join(OUTPUT_DIR, "encoder.keras"))
 auto_knn = joblib.load(os.path.join(OUTPUT_DIR, "autoencoder_knn.pkl"))
@@ -20,66 +30,93 @@ df = pd.read_csv(os.path.join(OUTPUT_DIR, "cleaned_data.csv"))
 
 
 # i can see the figures here
+def smooth_curve(points, factor=0.9):
+    smoothed = []
+    for p in points:
+        if smoothed:
+            smoothed.append(smoothed[-1] * factor + p * (1 - factor))
+        else:
+            smoothed.append(p)
+    return smoothed
+
+def plot_loss_curves(history):
+    train_loss = history["loss"]
+    val_loss = history.get("val_loss", [])
+    fig, ax = plt.subplots(figsize=(8,5))
+    ax.plot(train_loss, label="Train Loss", alpha=0.5)
+    if val_loss:
+        ax.plot(val_loss, label="Val Loss", alpha=0.5)
+        ax.plot(smooth_curve(val_loss), label="Val Loss (smoothed)")
+    ax.plot(smooth_curve(train_loss), label="Train Loss (smoothed)")
+    ax.set_title("Autoencoder Training Loss")
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    return fig
+
+def plot_clusters(embeddings, labels, method="tsne"):
+    if method == "tsne":
+        X_embedded = TSNE(n_components=2, random_state=42).fit_transform(embeddings)
+        title = "t-SNE Visualization of Song Clusters"
+    else:
+        X_embedded = PCA(n_components=2).fit_transform(embeddings)
+        title = "PCA Visualization of Song Clusters"
+    fig, ax = plt.subplots(figsize=(8,6))
+    scatter = ax.scatter(X_embedded[:,0], X_embedded[:,1], c=labels, cmap="tab10", alpha=0.7)
+    ax.set_title(title)
+    plt.colorbar(scatter, ax=ax, label="Cluster")
+    return fig
+
+def plot_mood_radar(mood_name, mood_vector, features=AUDIO_FEATURES):
+    angles = np.linspace(0, 2*np.pi, len(features), endpoint=False).tolist()
+    values = list(mood_vector.values())
+    values += values[:1]
+    angles += angles[:1]
+    fig, ax = plt.subplots(figsize=(6,6), subplot_kw=dict(polar=True))
+    ax.plot(angles, values, "o-", linewidth=2, label=mood_name)
+    ax.fill(angles, values, alpha=0.25)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(features)
+    ax.set_title(f"Mood Profile: {mood_name}")
+    ax.legend(loc="upper right")
+    return fig
 
 df = pd.read_csv("outputs/cleaned_data.csv")
 
-AUDIO_FEATURES = [
-    "danceability","energy","valence","tempo","acousticness",
-    "instrumentalness","liveness","speechiness","loudness"
-]
-
 # Tabs
-tab1, tab2, tab3 = st.tabs(["Recommendations", "Mood-based", "Visualizations"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
+    ["Recommendations", "Mood-based", "Visualizations", "Clustering", "Mood Profiles"]
+)
 
 with tab3:
     st.subheader("Exploratory Data Analysis")
 
-    # Feature distributions
-    fig, ax = plt.subplots(figsize=(15,10))
-    df[AUDIO_FEATURES].hist(bins=30, figsize=(15,10))
-    plt.suptitle("Distribution of Audio Features", fontsize=16)
-    st.pyplot(fig)
+    st.pyplot(plot_feature_distributions(df))
 
-    # Genre counts
-    fig, ax = plt.subplots(figsize=(12,6))
-    df["track_genre"].value_counts().plot(kind="bar", ax=ax)
-    ax.set_title("Track Count per Genre")
-    ax.set_xlabel("Genre")
-    ax.set_ylabel("Count")
-    st.pyplot(fig)
+    st.pyplot(plot_genre_counts(df))
 
-    # Correlation heatmap
-    fig, ax = plt.subplots(figsize=(10,8))
-    corr = df[AUDIO_FEATURES].corr()
-    sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-    ax.set_title("Correlation Heatmap of Audio Features")
-    st.pyplot(fig)
+    st.pyplot(plot_correlation_heatmap(df))
 
-    # Popularity distribution
-    fig, ax = plt.subplots(figsize=(8,5))
-    sns.histplot(df["popularity"], bins=30, kde=True, ax=ax)
-    ax.set_title("Popularity Distribution")
-    ax.set_xlabel("Popularity (0–100)")
-    ax.set_ylabel("Frequency")
-    st.pyplot(fig)
+    st.pyplot(plot_popularity_distribution(df))
 
     st.subheader("Autoencoder Training Loss")
     try:
         with open("outputs/autoencoder_history.pkl", "rb") as f:
             history = pickle.load(f)
-
-        fig, ax = plt.subplots(figsize=(8,5))
-        ax.plot(history["loss"], label="Training Loss")
-        if "val_loss" in history:
-            ax.plot(history["val_loss"], label="Validation Loss")
-        ax.set_title("Autoencoder Training Loss")
-        ax.set_xlabel("Epochs")
-        ax.set_ylabel("Loss")
-        ax.legend()
-        st.pyplot(fig)
-
+        st.pyplot(plot_loss_curves(history))   
     except FileNotFoundError:
         st.warning("Training history not found. Run autoencoder.py with history saving enabled.")
+        
+with tab4:
+    st.subheader("Embedding Clusters")
+    st.pyplot(plot_clusters(embeddings, cluster_model.labels_, method="tsne"))
+
+with tab5:
+    st.subheader("Mood Radar Charts")
+    for mood_name, mood_vector in MOOD_MAP.items():
+        st.pyplot(plot_mood_radar(mood_name, mood_vector))
+
+
 
 MOOD_MAP = {
     "sad": {
