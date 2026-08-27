@@ -1,22 +1,41 @@
-Spotify Music Recommendation System
-An end-to-end machine learning pipeline for personalized music recommendation. The system combines a baseline K-Nearest Neighbors (KNN) model, autoencoder-based embeddings, clustering (KMeans/GMM), and a Streamlit web interface for interactive exploration.
-The project covers the full workflow: data preprocessing, model training, evaluation, and deployment of a user-friendly recommendation UI.
+#Spotify Music Recommendation System
 
-Setup
-clone repo =  git clone https://github.com/yourusername/music-recommender.git
-              cd music-recommender
-install dependencies = pip install -r requirements.txt
+An end‑to‑end machine learning project that recommends songs based on track similarity and user moods.  
+Built with **Python, Scikit‑Learn, TensorFlow/Keras, and Streamlit**.
 
-Features
-Baseline vs Autoencoder recommendations side by side
-Mood‑based retrieval (sad, happy, party, chill, angry, romantic, focus, sleepy, motivated, calm, epic, melancholy, uplifting, dark, energetic)
-Cluster analysis (KMeans/GMM)
-Evaluation metrics: genre consistency, mood alignment, diversity
-Streamlit UI for interactive exploration
+---
 
-Future Work 
+# Features
+- **Baseline Recommendations**: KNN on raw audio features.
+- **Autoencoder Recommendations**: Latent embeddings for deeper similarity.
+- **Mood‑Based Playlists**: Generate recommendations for moods (happy, sad, party, chill).
+- **Clustering**: KMeans/GMM grouping with t‑SNE/PCA visualization.
+- **EDA Visualizations**: Feature distributions, genre counts, correlation heatmap, popularity distribution.
+- **Interactive Streamlit App**: Tabbed interface with recommendations and plots.
 
-Integrate cluster‑based recommendations into Streamlit
-Expand mood mapping with dataset‑driven averages
-Add automated tests + CI/CD
-Improve README with screenshots of the app
+---
+
+## Setup Instructions
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/gurungmanab88-creator/spotify_recommendation.git
+cd spotify_recommendation
+python -m venv venv
+source venv/bin/activate   # Mac/Linux
+venv\Scripts\activate      # Windows
+
+pip install -r requirements.txt
+
+run the pipeline
+python scripts/preprocess.py
+python scripts/autoencoder.py
+python scripts/clustering.py
+python scripts/save_model.py
+streamlit run app/app.py
+
+
+
+
+
+
