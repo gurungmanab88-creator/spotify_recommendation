@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scripts.config import AUDIO_FEATURES,OUTPUT_DIR
+from config import AUDIO_FEATURES,OUTPUT_DIR
 
 def plot_feature_distributions(df):
     

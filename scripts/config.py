@@ -7,5 +7,5 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
 AUDIO_FEATURES = [
     "danceability", "energy", "valence", "tempo",
     "acousticness", "instrumentalness", "liveness",
-    "speechiness", "loudness"
+    "speechiness", "loudness",
 ]

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import joblib
 from tensorflow.keras.models import load_model
-from baseline import AUDIO_FEATURES
+from config import AUDIO_FEATURES   
 from mood_parser import mood_to_vector
 
 def load_artifacts(
@@ -11,7 +11,7 @@ def load_artifacts(
     baseline_knn_path="outputs/baseline_knn.pkl",
     scaler_path="outputs/scaler.pkl",
     embeddings_path="outputs/embeddings.npy",
-    cluster_path="outputs/kmeans.pkl",
+    cluster_path="outputs/cluster_model.pkl",
     df_path="outputs/cleaned_data.csv"
 ):
     encoder = load_model(encoder_path)
@@ -24,11 +24,11 @@ def load_artifacts(
     print("Artifacts loaded successfully.")
     return df, encoder, auto_knn, baseline_knn, scaler, embeddings, cluster_model
 
-# Utility: add normalized match score
+
 def add_match_score(recs, distances):
     recs = recs.copy()
     max_d = max(distances)
-    recs["match_score"] = 1 - (distances / max_d)  # closer = higher score
+    recs["match_score"] = 1 - (distances / max_d)  
     return recs
 
 def recommend_track_autoencoder(track_name, df, encoder, knn, n_neighbors=10):
@@ -46,14 +46,17 @@ def recommend_track_autoencoder(track_name, df, encoder, knn, n_neighbors=10):
     print(recs[["track_name", "artists", "track_genre", "popularity", "match_score"]])
     return recs
 
-def recommend_track_baseline(track_name, df, knn, n_neighbors=10):
+def recommend_track_baseline(track_name, df, knn, scaler, n_neighbors=10):
     track = df[df["track_name"].str.lower() == track_name.lower()]
     if track.empty:
         print("Track not found.")
         return None
     idx = track.index[0]
-    X = df[AUDIO_FEATURES].values
-    distances, indices = knn.kneighbors([X[idx]], n_neighbors=n_neighbors)
+    X_raw = df[AUDIO_FEATURES].values
+    X_scaled = scaler.transform(X_raw)
+    distances, indices = knn.kneighbors([X_scaled[idx]], n_neighbors=n_neighbors)
+
+    
     recs = df.iloc[indices[0]]
     recs = add_match_score(recs, distances[0])
     print(f"\nBaseline recommendations for '{track_name}':")
@@ -65,7 +68,7 @@ def recommend_within_cluster(track_name, df, n_neighbors=10):
     if track.empty:
         print("Track not found.")
         return None
-    cluster = track["cluster"].values[0]  # use precomputed cluster
+    cluster = track["cluster"].values[0]  
     same_cluster = df[df["cluster"] == cluster]
     recs = same_cluster.head(n_neighbors)
     print(f"\nRecommendations for '{track_name}' within cluster {cluster}:")
@@ -73,18 +76,24 @@ def recommend_within_cluster(track_name, df, n_neighbors=10):
     return recs
 
 def recommend_mood_autoencoder(mood, df, encoder, knn, scaler, n_neighbors=10, genre=None):
-    vec = mood_to_vector(mood, scaler)
+    vec = mood_to_vector(mood)  
     if vec is None:
+        print("Mood not recognized.")
         return None
+
+  
     embedding = encoder.predict(vec)
     distances, indices = knn.kneighbors(embedding, n_neighbors=n_neighbors)
     recs = df.iloc[indices[0]]
     recs = add_match_score(recs, distances[0])
+
     if genre:
-        recs = recs[recs["track_genre"].str.lower() == genre.lower()]
+        recs = recs[recs["track_genre"].str.contains(genre, case=False, na=False)]
+
     print(f"\nAutoencoder recommendations for mood '{mood}'" + (f" in genre '{genre}'" if genre else "") + ":")
     print(recs[["track_name", "artists", "track_genre", "popularity", "match_score"]])
     return recs
+
 
 if __name__ == "__main__":
     df, encoder, auto_knn, baseline_knn, scaler, embeddings, cluster_model = load_artifacts()

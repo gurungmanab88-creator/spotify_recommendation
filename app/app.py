@@ -103,8 +103,9 @@ def load_models():
     encoder = load_model(os.path.join(OUTPUT_DIR, "encoder.keras"))
     auto_knn = joblib.load(os.path.join(OUTPUT_DIR, "autoencoder_knn.pkl"))
     baseline_knn = joblib.load(os.path.join(OUTPUT_DIR, "baseline_knn.pkl"))
-    cluster_model = joblib.load(os.path.join(OUTPUT_DIR, "kmeans.pkl"))
+    cluster_model = joblib.load(os.path.join(OUTPUT_DIR, "cluster_model.pkl"))   # ✅ load winner
     return encoder, auto_knn, baseline_knn, cluster_model
+
 
 @st.cache_data
 def load_data():
@@ -201,11 +202,13 @@ def mood_to_vector(mood: str, scaler):
     mapping = MOOD_MAP.get(mood.lower())
     if mapping is None:
         return None
+    
     vec = np.array([mapping.get(feat, 0.5) for feat in AUDIO_FEATURES]).reshape(1, -1)
+    
     return scaler.transform(vec)
 
 @st.cache_data
-def get_recommendations(track_name, _df, _knn, n_neighbors=10, is_autoencoder=False, _encoder=None):
+def get_recommendations(track_name, _df, _knn, n_neighbors=10, is_autoencoder=False, _encoder=None, _scaler=None):
     track = _df[_df["track_name"].str.lower() == track_name.lower()]
     if track.empty:
         return None
@@ -217,11 +220,15 @@ def get_recommendations(track_name, _df, _knn, n_neighbors=10, is_autoencoder=Fa
         embedding = _encoder.predict(X[idx].reshape(1, -1), verbose=0)
         distances, indices = _knn.kneighbors(embedding, n_neighbors=n_neighbors)
     else:
-        distances, indices = _knn.kneighbors([X[idx]], n_neighbors=n_neighbors)
+        query_df = pd.DataFrame(X[idx].reshape(1, -1), columns=AUDIO_FEATURES)
+        query = _scaler.transform(query_df)
+        distances, indices = _knn.kneighbors(query, n_neighbors=n_neighbors)
 
     recs = _df.iloc[indices[0]].copy()
-    recs["distance"] = distances[0]
-    return recs[["track_name", "artists", "track_genre", "popularity", "distance"]]
+    max_dist = distances[0].max()
+    recs["match_score"] = 1 - (distances[0] / max_dist)
+    return recs[["track_name", "artists", "track_genre", "popularity", "match_score"]]
+
 
 @st.cache_data
 def get_mood_recommendations(mood, _df, _encoder, _knn, _scaler, n_neighbors=10, genre=None):
@@ -232,12 +239,14 @@ def get_mood_recommendations(mood, _df, _encoder, _knn, _scaler, n_neighbors=10,
     embedding = _encoder.predict(vec, verbose=0)
     distances, indices = _knn.kneighbors(embedding, n_neighbors=n_neighbors * 3)
     recs = _df.iloc[indices[0]].copy()
-    recs["distance"] = distances[0]
+    max_dist = distances[0].max()
+    recs["match_score"] = 1 - (distances[0] / max_dist)
 
     if genre and genre != "All":
         recs = recs[recs["track_genre"].str.lower() == genre.lower()]
 
-    return recs[["track_name", "artists", "track_genre", "popularity", "distance"]].head(n_neighbors)
+    return recs[["track_name", "artists", "track_genre", "popularity", "match_score"]].head(n_neighbors)
+
 
 # ----------------------- UI -----------------------
 st.set_page_config(

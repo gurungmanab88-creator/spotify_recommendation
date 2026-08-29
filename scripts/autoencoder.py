@@ -4,7 +4,10 @@ import pandas as pd
 import numpy as np, tensorflow as tf
 from tensorflow.keras import layers, models
 from sklearn.neighbors import NearestNeighbors
-import joblib
+import joblib, os
+from tensorflow.keras.models import load_model
+from tensorflow.keras.callbacks import ModelCheckpoint
+
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -15,64 +18,77 @@ def train_autoencoder(
     knn_path="outputs/autoencoder_knn.pkl",
     embedding_dim=10,
     n_neighbors=10,
-    epochs=100,
+    epochs=30,
     batch_size=32
 ):
-    # Load scaled dataset
+
+
+ 
     df = pd.read_csv(scaled_path)
     X = df[AUDIO_FEATURES].values
 
-    # Build autoencoder
-    input_dim = X.shape[1]
-    input_layer = layers.Input(shape=(input_dim,))
-    encoded = layers.Dense(16, activation="relu")(input_layer)
-    encoded = layers.Dense(embedding_dim, activation="linear")(encoded)
+ 
+    if os.path.exists("outputs/encoder_checkpoint.keras"):
+        autoencoder = load_model("outputs/encoder_checkpoint.keras")
+        print("Resuming training from checkpoint...")
+ 
+        encoder = models.Model(autoencoder.input, autoencoder.layers[-3].output)
+    else:
 
-    decoded = layers.Dense(16, activation="relu")(encoded)
-    decoded = layers.Dense(input_dim, activation="linear")(decoded)
+        input_dim = X.shape[1]
+        input_layer = layers.Input(shape=(input_dim,))
+        encoded = layers.Dense(16, activation="relu")(input_layer)
+        encoded = layers.Dense(embedding_dim, activation="linear")(encoded)
+        decoded = layers.Dense(16, activation="relu")(encoded)
+        decoded = layers.Dense(input_dim, activation="linear")(decoded)
+        autoencoder = models.Model(input_layer, decoded)
+        encoder = models.Model(input_layer, encoded)
+        autoencoder.compile(optimizer="adam", loss="mse")
 
-    autoencoder = models.Model(input_layer, decoded)
-    encoder = models.Model(input_layer, encoded)
 
-    autoencoder.compile(optimizer="adam", loss="mse")
+    checkpoint_cb = ModelCheckpoint(
+        "outputs/encoder_checkpoint.keras",
+        save_best_only=True,
+        monitor="val_loss",
+        mode="min"
+    )
 
-    # Train autoencoder
     history = autoencoder.fit(
         X, X,
         epochs=epochs,
         batch_size=batch_size,
         shuffle=True,
-        validation_split=0.1
+        validation_split=0.1,
+        callbacks=[checkpoint_cb]  
     )
 
-    # Save training history for Streamlit visualization
     import pickle
     with open("outputs/autoencoder_history.pkl", "wb") as f:
         pickle.dump(history.history, f)
     print("Training history saved to outputs/autoencoder_history.pkl")
 
-    # Save encoder
+    
     encoder.save(encoder_path)
     print(f"Encoder saved to {encoder_path}")
 
-    # Extract embeddings
     embeddings = encoder.predict(X)
 
-    # Fit NearestNeighbors on embeddings
+  
     knn = NearestNeighbors(n_neighbors=n_neighbors, metric="cosine")
     knn.fit(embeddings)
     joblib.dump(knn, knn_path)
     print(f"KNN model saved to {knn_path}")
 
-    # Save embeddings array
+
     np.save("outputs/embeddings.npy", embeddings)
     print("Embeddings saved to outputs/embeddings.npy")
 
-    # Save cleaned dataframe for later use in Streamlit
+    
     df.to_csv("outputs/cleaned_data.csv", index=False)
     print("Cleaned dataframe saved to outputs/cleaned_data.csv")
 
     return df, encoder, knn
+
 
 
 def recommend(track_name, df, encoder, knn, n_neighbors=10):
