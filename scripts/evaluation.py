@@ -5,7 +5,7 @@ from tensorflow.keras.models import load_model
 from config import AUDIO_FEATURES
 from mood_parser import mood_to_vector
 
-# --- Metric Functions ---
+
 
 def evaluate_genre_consistency(df, encoder, knn, track_name, n_neighbors=10, use_encoder=False, scaler=None):
     track = df[df["track_name"].str.lower() == track_name.lower()]
@@ -84,7 +84,7 @@ def evaluate_diversity(df, encoder, knn, track_name, n_neighbors=10, use_encoder
     return diversity
 
 
-# --- Artifact Loader ---
+
 
 def load_artifacts(
     encoder_path="outputs/encoder.keras",
@@ -104,7 +104,7 @@ def load_artifacts(
     return df, encoder, auto_knn, baseline_knn, scaler, embeddings
 
 
-# --- Main Block ---
+
 
 if __name__ == "__main__":
     df, encoder, auto_knn, baseline_knn, scaler, embeddings = load_artifacts()
@@ -113,17 +113,16 @@ if __name__ == "__main__":
     mood = "happy"
 
     print("\n=== Evaluation Metrics ===")
-    # Autoencoder metrics
+
     gc_auto = evaluate_genre_consistency(df, encoder, auto_knn, seed_track, use_encoder=True, scaler=scaler)
     ma_auto = evaluate_mood_alignment(df, encoder, auto_knn, mood, use_encoder=True, scaler=scaler)
     div_auto = evaluate_diversity(df, encoder, auto_knn, seed_track, use_encoder=True, scaler=scaler)
 
-    # Baseline metrics
+
     gc_base = evaluate_genre_consistency(df, encoder, baseline_knn, seed_track, use_encoder=False, scaler=scaler)
     ma_base = evaluate_mood_alignment(df, encoder, baseline_knn, mood, use_encoder=False, scaler=scaler)
     div_base = evaluate_diversity(df, encoder, baseline_knn, seed_track, use_encoder=False, scaler=scaler)
 
-    # Print comparison table
     print("\nMetric              Baseline KNN     Autoencoder KNN")
     print(f"Genre consistency   {gc_base:.2f}            {gc_auto:.2f}")
     print(f"Mood alignment      {ma_base:.2f}            {ma_auto:.2f}")

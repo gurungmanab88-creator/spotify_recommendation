@@ -17,8 +17,6 @@ from scripts.eda import (
     plot_correlation_heatmap,
     plot_popularity_distribution
 )
-
-# ----------------------- Mood lexicon -----------------------
 MOOD_MAP = {
     "sad": {
         "danceability": 0.3, "energy": 0.2, "valence": 0.2, "tempo": 0.4,
@@ -116,8 +114,7 @@ def load_data():
 
 encoder, auto_knn, baseline_knn, cluster_model = load_models()
 df, scaler, embeddings = load_data()
-
-# ----------------------- Plotting functions -----------------------
+#plots_function
 def smooth_curve(points, factor=0.9):
     smoothed = []
     for p in points:
@@ -197,7 +194,7 @@ def cached_cluster_plot(_embeddings, _labels, method="pca"):
 def cached_mood_radar(mood_name, mood_vector):
     return plot_mood_radar(mood_name, mood_vector)
 
-# ----------------------- Recommendation helpers -----------------------
+#recommendation_helper
 def mood_to_vector(mood: str, scaler):
     mapping = MOOD_MAP.get(mood.lower())
     if mapping is None:
@@ -220,9 +217,10 @@ def get_recommendations(track_name, _df, _knn, n_neighbors=10, is_autoencoder=Fa
         embedding = _encoder.predict(X[idx].reshape(1, -1), verbose=0)
         distances, indices = _knn.kneighbors(embedding, n_neighbors=n_neighbors)
     else:
-        query_df = pd.DataFrame(X[idx].reshape(1, -1), columns=AUDIO_FEATURES)
-        query = _scaler.transform(query_df)
+        query = X[idx].reshape(1, -1)
         distances, indices = _knn.kneighbors(query, n_neighbors=n_neighbors)
+
+
 
     recs = _df.iloc[indices[0]].copy()
     max_dist = distances[0].max()
@@ -248,7 +246,7 @@ def get_mood_recommendations(mood, _df, _encoder, _knn, _scaler, n_neighbors=10,
     return recs[["track_name", "artists", "track_genre", "popularity", "match_score"]].head(n_neighbors)
 
 
-# ----------------------- UI -----------------------
+# my_ui of streamlit
 st.set_page_config(
     page_title="Spotify Music Recommender",
     page_icon="🎵",
@@ -260,12 +258,11 @@ st.markdown("Compare **Baseline KNN** vs **Autoencoder Embeddings** • Mood-bas
 
 
 
-# Sidebar
 st.sidebar.header("Settings")
 mode = st.sidebar.radio("Recommendation Mode", ["Track-based", "Mood-based"])
 n_neighbors = st.sidebar.slider("Number of recommendations", 5, 20, 10)
 
-# Tabs
+
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ["Recommendations", "Mood-based", "Visualizations", "Clustering", "Mood Profiles"]
 )
@@ -294,7 +291,7 @@ with tab5:
     for mood_name, mood_vector in MOOD_MAP.items():
         st.pyplot(cached_mood_radar(mood_name, mood_vector))
 
-# ----------------------- Track-based Mode -----------------------
+#track_based recommendation below
 if mode == "Track-based":
     st.subheader(" Track-based Recommendations")
 

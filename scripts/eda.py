@@ -1,7 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from config import AUDIO_FEATURES,OUTPUT_DIR
+from scripts.config import AUDIO_FEATURES, OUTPUT_DIR
+
 
 def plot_feature_distributions(df):
     
@@ -22,7 +23,7 @@ def plot_genre_counts(df, top_n=15):
     ax.set_title(f"Top {top_n} Genres by Track Count")
     ax.set_xlabel("Count")
     ax.set_ylabel("Genre")
-    # Add labels on bars
+  
     for i, v in enumerate(genre_counts.values):
         ax.text(v + 5, i, str(v), color="black", va="center")
     plt.tight_layout()
