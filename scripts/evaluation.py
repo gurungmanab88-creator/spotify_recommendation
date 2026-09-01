@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import joblib
+import random
 from tensorflow.keras.models import load_model
 from config import AUDIO_FEATURES
 from mood_parser import mood_to_vector
@@ -105,25 +106,42 @@ def load_artifacts(
 
 
 
-
 if __name__ == "__main__":
     df, encoder, auto_knn, baseline_knn, scaler, embeddings = load_artifacts()
 
-    seed_track = "Shape of You"
+
+    sample_size = 50
+    seed_tracks = random.sample(df["track_name"].dropna().unique().tolist(), sample_size)
+
     mood = "happy"
+    results = []
 
-    print("\n=== Evaluation Metrics ===")
+    print("\n=== Evaluation Metrics Across Seeds ===")
+    for seed_track in seed_tracks:
+        gc_auto = evaluate_genre_consistency(df, encoder, auto_knn, seed_track, use_encoder=True, scaler=scaler)
+        ma_auto = evaluate_mood_alignment(df, encoder, auto_knn, mood, use_encoder=True, scaler=scaler)
+        div_auto = evaluate_diversity(df, encoder, auto_knn, seed_track, use_encoder=True, scaler=scaler)
 
-    gc_auto = evaluate_genre_consistency(df, encoder, auto_knn, seed_track, use_encoder=True, scaler=scaler)
-    ma_auto = evaluate_mood_alignment(df, encoder, auto_knn, mood, use_encoder=True, scaler=scaler)
-    div_auto = evaluate_diversity(df, encoder, auto_knn, seed_track, use_encoder=True, scaler=scaler)
+        gc_base = evaluate_genre_consistency(df, encoder, baseline_knn, seed_track, use_encoder=False, scaler=scaler)
+        ma_base = evaluate_mood_alignment(df, encoder, baseline_knn, mood, use_encoder=False, scaler=scaler)
+        div_base = evaluate_diversity(df, encoder, baseline_knn, seed_track, use_encoder=False, scaler=scaler)
 
+        results.append({
+            "track": seed_track,
+            "gc_base": gc_base, "gc_auto": gc_auto,
+            "ma_base": ma_base, "ma_auto": ma_auto,
+            "div_base": div_base, "div_auto": div_auto
+        })
 
-    gc_base = evaluate_genre_consistency(df, encoder, baseline_knn, seed_track, use_encoder=False, scaler=scaler)
-    ma_base = evaluate_mood_alignment(df, encoder, baseline_knn, mood, use_encoder=False, scaler=scaler)
-    div_base = evaluate_diversity(df, encoder, baseline_knn, seed_track, use_encoder=False, scaler=scaler)
+    avg_gc_base = np.mean([r["gc_base"] for r in results if r["gc_base"] is not None])
+    avg_gc_auto = np.mean([r["gc_auto"] for r in results if r["gc_auto"] is not None])
+    avg_ma_base = np.mean([r["ma_base"] for r in results if r["ma_base"] is not None])
+    avg_ma_auto = np.mean([r["ma_auto"] for r in results if r["ma_auto"] is not None])
+    avg_div_base = np.mean([r["div_base"] for r in results if r["div_base"] is not None])
+    avg_div_auto = np.mean([r["div_auto"] for r in results if r["div_auto"] is not None])
 
-    print("\nMetric              Baseline KNN     Autoencoder KNN")
-    print(f"Genre consistency   {gc_base:.2f}            {gc_auto:.2f}")
-    print(f"Mood alignment      {ma_base:.2f}            {ma_auto:.2f}")
-    print(f"Diversity           {div_base:.2f}            {div_auto:.2f}")
+    print("\n=== Average Metrics (across sample) ===")
+    print("Metric              Baseline KNN     Autoencoder KNN")
+    print(f"Genre consistency   {avg_gc_base:.2f}            {avg_gc_auto:.2f}")
+    print(f"Mood alignment      {avg_ma_base:.2f}            {avg_ma_auto:.2f}")
+    print(f"Diversity           {avg_div_base:.2f}            {avg_div_auto:.2f}")
