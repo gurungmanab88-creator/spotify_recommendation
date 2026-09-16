@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pickle
 from scripts.config import AUDIO_FEATURES, OUTPUT_DIR
 
 
@@ -50,3 +51,31 @@ def plot_popularity_distribution(df):
     ax.set_ylabel("Frequency")
     ax.legend()
     return fig
+
+
+def plot_autoencoder_loss(history_path="outputs/autoencoder_history.pkl"):
+    # Load training history
+    with open(history_path, "rb") as f:
+        history = pickle.load(f)
+
+    fig, ax = plt.subplots(figsize=(8,5))
+    ax.plot(history["loss"], label="Training Loss")
+    if "val_loss" in history:
+        ax.plot(history["val_loss"], label="Validation Loss")
+
+    ax.set_title("Autoencoder Training Loss Curve")
+    ax.set_xlabel("Epochs")
+    ax.set_ylabel("Loss")
+    ax.legend()
+    ax.grid(True)
+    return fig
+
+if __name__ == "__main__":
+    df = pd.read_csv("outputs/cleaned_data.csv")
+    plot_feature_distributions(df)
+    plot_genre_counts(df)
+    plot_correlation_heatmap(df)
+    plot_popularity_distribution(df)
+    plot_autoencoder_loss()
+    plt.show()
+ 
